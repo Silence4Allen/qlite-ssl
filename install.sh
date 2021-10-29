@@ -285,10 +285,10 @@ function create_dir() {
     if [ -n $_dir ]; then
         if [ ! -d $_dir ]; then
             if [[ -n $_need_sudo ]] && [[ $_need_sudo == "yes" ]]; then
-                sudo mkdir -p $_dir
-                sudo chmod $_authority $_dir
+                sudo mkdir -p $_dir >/dev/null 2>&1
+                sudo chmod $_authority $_dir >/dev/null 2>&1
             else
-                mkdir -p $_dir
+                mkdir -p $_dir >/dev/null 2>&1
             fi
         fi
         if [ ! -d $_dir ]; then
@@ -488,9 +488,9 @@ function download_acme() {
     # git clone "$ACME_PROJECT_GITEE_GIT" >>${QLITE_SSL_LOG_FILE} 2>&1
     wget -q -O ${_acme_zip} "$ACME_PROJECT_GITEE_ZIP" >>${QLITE_SSL_LOG_FILE} 2>&1
     if [ $? -eq 0 ]; then
-      unzip -qo ${_acme_zip} >/dev/null 2>&1
-      rm -rf ${_acme_zip} >/dev/null 2>&1
-      sudo mv ${_acme_dir} ${ACME_SHELL_PROJECT_ENTRY} >/dev/null 2>&1
+        unzip -qo ${_acme_zip} >/dev/null 2>&1
+        rm -rf ${_acme_zip} >/dev/null 2>&1
+        sudo mv ${_acme_dir} ${ACME_SHELL_PROJECT_ENTRY} >/dev/null 2>&1
     fi
     if ! is_acme_downloaded no; then
         log_error "$ACME_SHELL_DOWNLOAD_FAILED"
@@ -578,7 +578,9 @@ function install_cert() {
         log_success $ACME_SHELL_CERT_INSTALL_SUCCESS
         update_nginx_conf
         log_success "$CERT_SAVE_ABS_PATH_TIP"
-        sudo cp -rf $abs_cert_path $QLITE_SSL_PATH
+        if [ $abs_cert_path != $QLITE_SSL_PATH ]; then
+            sudo cp -rf $abs_cert_path $QLITE_SSL_PATH >/dev/null 2>&1
+        fi
         return 0
     else
         check_command_failed_reason
@@ -663,7 +665,7 @@ function check_qlite_ssl() {
 
 function uninstall_nginx() {
     log_info "$NGINX_UNINSTALL_TIP"
-    sudo rm -rf "$NGINX_ROOT_PATH"
+    sudo rm -rf "$NGINX_ROOT_PATH" >/dev/null 2>&1
     sudo "$system_package" -y autoremove nginx >>${QLITE_SSL_LOG_FILE} 2>&1
     if ! is_command_exists nginx no; then
         log_success ${NGINX_UNINSTALL_SUCCESS}
@@ -679,7 +681,7 @@ function init_nginx_qlite_default_resource() {
         if [ ! -f ${QLITE_SSL_INDEX_HTML} ]; then
             need_update_nginx_conf=0
         else
-            cp ${QLITE_SSL_INDEX_HTML} ${NGINX_QLITE_RESOURCE_INDEX_HTML}
+            cp ${QLITE_SSL_INDEX_HTML} ${NGINX_QLITE_RESOURCE_INDEX_HTML} >/dev/null 2>&1
         fi
     fi
     if [ ! -f ${NGINX_QLITE_RESOURCE_WELCOME_IMG} ]; then
@@ -687,15 +689,15 @@ function init_nginx_qlite_default_resource() {
         if [ ! -f ${QLITE_SSL_WELCOME_IMAGE} ]; then
             need_update_nginx_conf=0
         else
-            cp ${QLITE_SSL_WELCOME_IMAGE} ${NGINX_QLITE_RESOURCE_WELCOME_IMG}
+            cp ${QLITE_SSL_WELCOME_IMAGE} ${NGINX_QLITE_RESOURCE_WELCOME_IMG} >/dev/null 2>&1
         fi
     fi
 
     if [ $need_update_nginx_conf -eq 0 ]; then
-        sudo cp ${QLITE_SSL_DOWNLOAD_INDEX_HTML} ${NGINX_QLITE_RESOURCE_INDEX_HTML}
-        sudo chmod 666 ${NGINX_QLITE_RESOURCE_INDEX_HTML}
-        sudo cp ${QLITE_SSL_DOWNLOAD_WELCOME_IMAGE} ${NGINX_QLITE_RESOURCE_WELCOME_IMG}
-        sudo chmod 666 ${NGINX_QLITE_RESOURCE_WELCOME_IMG}
+        sudo cp ${QLITE_SSL_DOWNLOAD_INDEX_HTML} ${NGINX_QLITE_RESOURCE_INDEX_HTML} >/dev/null 2>&1
+        sudo chmod 666 ${NGINX_QLITE_RESOURCE_INDEX_HTML} >/dev/null 2>&1
+        sudo cp ${QLITE_SSL_DOWNLOAD_WELCOME_IMAGE} ${NGINX_QLITE_RESOURCE_WELCOME_IMG} >/dev/null 2>&1
+        sudo chmod 666 ${NGINX_QLITE_RESOURCE_WELCOME_IMG} >/dev/null 2>&1
         if [ $? -eq 0 ]; then
             log_success $NGINX_GET_CONF_SUCCESS
             create_dir $QLITE_SSL_WWW
@@ -833,7 +835,7 @@ function install_nginx() {
     if [ -d $NGINX_ROOT_PATH ]; then
         local _datetime=$(date "+%s")
         create_dir "$QLITE_SSL_DOMAIN_BACKUP_NGINX"
-        sudo mv "$NGINX_ROOT_PATH" "$QLITE_SSL_DOMAIN_BACKUP_NGINX"
+        sudo mv "$NGINX_ROOT_PATH" "$QLITE_SSL_DOMAIN_BACKUP_NGINX" >/dev/null 2>&1
     fi
     sudo "$system_package" -y install nginx >>${QLITE_SSL_LOG_FILE} 2>&1
     if [ ! -d "$NGINX_ROOT_PATH" ]; then
@@ -848,7 +850,7 @@ function install_nginx() {
     fi
     log_success ${NGINX_INSTALL_SUCCESS}
     init_nginx_conf
-    sudo systemctl restart nginx
+    sudo systemctl restart nginx >>${QLITE_SSL_LOG_FILE} 2>&1
     sleep 3
     install_nginx_success="0"
 }
