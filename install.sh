@@ -1,6 +1,4 @@
 #!/bin/bash
-# shellcheck disable=SC2034
-# shellcheck disable=SC1091
 
 ACME_PROJECT_GITEE_GIT="https://gitee.com/silence4allen/acme.sh.git"
 ACME_PROJECT_GITEE_ZIP="https://gitee.com/silence4allen/acme.sh/repository/archive/master.zip"
@@ -62,7 +60,7 @@ QLITE_SSL_HTML="${QLITE_SSL_WWW}/html"
 QLITE_SSL_INDEX_HTML="${QLITE_SSL_HTML}/${QLITE_SSL_INDEX_NAME}"
 QLITE_SSL_IMG="${QLITE_SSL_WWW}/img"
 QLITE_SSL_WELCOME_IMAGE="${QLITE_SSL_IMG}/${QLITE_SSL_IMAGE_NAME}"
-QLITE_SSL_DOMAIN_PATH="${LINUX_HOME_PATH}/${QLITE_SSL_NAME}/%s"
+QLITE_SSL_DOMAIN_PATH="${QLITE_SSL_PATH}/%s"
 QLITE_SSL_DOMAIN_BACKUP_NGINX="${QLITE_SSL_DOMAIN_PATH}/backup/nginx/"
 QLITE_SSL_CERT_FILE_NAME="fullchain.pem"
 QLITE_SSL_DOMAIN_CERT_PATH="${QLITE_SSL_DOMAIN_PATH}/${QLITE_SSL_CERT_FILE_NAME}"
@@ -172,7 +170,7 @@ function parse_arguments() {
 
 function init_cert_path() {
     if [[ ! -n $cert_path ]] || [[ $cert_path == '' ]]; then
-        create_dir $  "yes" "666"
+        create_dir $QLITE_SSL_PATH
         cert_path=$QLITE_SSL_PATH
     fi
     cert_path=$(readlink -f $cert_path)
@@ -181,14 +179,14 @@ function init_cert_path() {
         exit 1
     fi
     if [ ! -d $cert_path ]; then
-        create_dir $cert_path "yes" "777"
+        create_dir $cert_path
         if [ ! -d $cert_path ]; then
             log_error "$CERT_SAVE_PATH_PARSE_ERROR"
             exit 1
         fi
     fi
     abs_cert_path=${cert_path}"/"${user_domain}
-    create_dir $abs_cert_path "yes" "777"
+    create_dir $abs_cert_path
 }
 
 function check_shell_arguments() {
@@ -252,19 +250,10 @@ function is_command_exists() {
 
 function create_file() {
     local _file="$1"
-    local _need_sudo="$2"
-    local _authority="$3"
-    if [[ -n $_authority ]] && [[ ${_authority} == "" ]]; then
-        _authority=644
-    fi
     if [ -n $_file ]; then
         if [ ! -f $_file ]; then
-            if [[ -n $_need_sudo ]] && [[ $_need_sudo == "yes" ]]; then
-                sudo touch $_file
-                sudo chmod $_authority $_file
-            else
-                touch $_file
-            fi
+            touch $_file
+            log_to_log "create file ${_file}" >>${QLITE_SSL_LOG_FILE}
         fi
         if [ ! -f $_file ]; then
             local _i=$(printf "${CREATE_FILE_FAILED_ERROR}" ${_file})
@@ -277,19 +266,10 @@ function create_file() {
 
 function create_dir() {
     local _dir="$1"
-    local _need_sudo="$2"
-    local _authority="$3"
-    if [[ -n $_authority ]] && [[ ${_authority} == "" ]]; then
-        _authority=644
-    fi
     if [ -n $_dir ]; then
         if [ ! -d $_dir ]; then
-            if [[ -n $_need_sudo ]] && [[ $_need_sudo == "yes" ]]; then
-                sudo mkdir -p $_dir >/dev/null 2>&1
-                sudo chmod $_authority $_dir >/dev/null 2>&1
-            else
-                mkdir -p $_dir >/dev/null 2>&1
-            fi
+            mkdir -p $_dir >/dev/null 2>&1
+            log_to_log "create dir ${_dir}" >>${QLITE_SSL_LOG_FILE}
         fi
         if [ ! -d $_dir ]; then
             local _i=$(printf "${CREATE_DIR_FAILED_ERROR}" ${_dir})
@@ -331,8 +311,8 @@ function show_log_tip_exit() {
 
 function install_required_pkg() {
     log_info "$COMAND_CHECK_TIP"
-    log_to_log "sudo $system_package -y install $REQUIRED_PKGS"
-    sudo $system_package -y install $REQUIRED_PKGS >/dev/null 2>&1
+    log_to_log "$system_package -y install $REQUIRED_PKGS"
+    $system_package -y install $REQUIRED_PKGS >/dev/null 2>&1
 }
 
 function get_linux_info() {
@@ -399,7 +379,7 @@ function check_dns_entries() {
 }
 
 function check_update_system_resource() {
-    sudo "$system_package" -y update >/dev/null 2>&1
+    "$system_package" -y update >/dev/null 2>&1
 }
 
 function preinstall_check() {
@@ -459,7 +439,7 @@ function read_web_server() {
 
 function is_acme_downloaded() {
     if ! [ -d ${ACME_SHELL_DOWNLOAD_PATH} ]; then
-        if [ "$2" != "no" ]; then
+        if [ "$1" != "no" ]; then
             log_warn "$ACME_SHELL_UNDOWNLOAD_ERROR"
         fi
         return 1
@@ -469,7 +449,7 @@ function is_acme_downloaded() {
 
 function is_acme_existed() {
     if ! [ -x "$(command -v "$ACME_SHELL_PATH")" ]; then
-        if [ "$2" != "no" ]; then
+        if [ "$1" != "no" ]; then
             log_warn "$ACME_SHELL_UNINSTALL_ERROR"
         fi
         return 1
@@ -490,7 +470,7 @@ function download_acme() {
     if [ $? -eq 0 ]; then
         unzip -qo ${_acme_zip} >/dev/null 2>&1
         rm -rf ${_acme_zip} >/dev/null 2>&1
-        sudo mv ${_acme_dir} ${ACME_SHELL_PROJECT_ENTRY} >/dev/null 2>&1
+        mv ${_acme_dir} ${ACME_SHELL_PROJECT_ENTRY} >/dev/null 2>&1
     fi
     if ! is_acme_downloaded no; then
         log_error "$ACME_SHELL_DOWNLOAD_FAILED"
@@ -536,7 +516,7 @@ function issue_cert() {
             show_log_tip_exit 1
         fi
     fi
-    sudo "$ACME_SHELL_PATH" --issue -d "$user_domain" -d www."$user_domain" --"$web_server_plugin" --server "$DEFAULT_CA_SERVER" -m "$contact_email" $IS_DEBUG >>${QLITE_SSL_LOG_FILE} 2>&1
+    "$ACME_SHELL_PATH" --issue -d "$user_domain" -d www."$user_domain" --"$web_server_plugin" --server "$DEFAULT_CA_SERVER" -m "$contact_email" $IS_DEBUG >>${QLITE_SSL_LOG_FILE} 2>&1
     if [ $? -eq 0 ] && test -s $ACME_SHELL_CERT_DOMAIN_CERT_PATH; then
         log_success ${ACME_SHELL_CERT_ISSUE_SUCCESS}
         return 0
@@ -551,7 +531,7 @@ function install_cert() {
     log_info "$ACME_SHELL_CERT_INSTALL_TIP"
     case $web_server in
         1)
-            sudo "$ACME_SHELL_PATH" --install-cert -d "$user_domain" \
+            "$ACME_SHELL_PATH" --install-cert -d "$user_domain" \
                 --cert-file "$abs_cert_path"/cert.pem \
                 --key-file "$abs_cert_path"/key.pem \
                 --fullchain-file "$abs_cert_path"/fullchain.pem \
@@ -559,7 +539,7 @@ function install_cert() {
                 $IS_DEBUG >>${QLITE_SSL_LOG_FILE} 2>&1
             ;;
         2)
-            sudo "$ACME_SHELL_PATH" --install-cert -d "$user_domain" \
+            "$ACME_SHELL_PATH" --install-cert -d "$user_domain" \
                 --cert-file "$abs_cert_path"/cert.pem \
                 --key-file "$abs_cert_path"/key.pem \
                 --fullchain-file "$abs_cert_path"/fullchain.pem \
@@ -567,7 +547,7 @@ function install_cert() {
                 $IS_DEBUG >>${QLITE_SSL_LOG_FILE} 2>&1
             ;;
         *)
-            sudo "$ACME_SHELL_PATH" --install-cert -d "$user_domain" \
+            "$ACME_SHELL_PATH" --install-cert -d "$user_domain" \
                 --cert-file "$abs_cert_path"/cert.pem \
                 --key-file "$abs_cert_path"/key.pem \
                 --fullchain-file "$abs_cert_path"/fullchain.pem \
@@ -579,7 +559,7 @@ function install_cert() {
         update_nginx_conf
         log_success "$CERT_SAVE_ABS_PATH_TIP"
         if [ $abs_cert_path != $QLITE_SSL_PATH ]; then
-            sudo cp -rf $abs_cert_path $QLITE_SSL_PATH >/dev/null 2>&1
+            cp -rf $abs_cert_path $QLITE_SSL_PATH >/dev/null 2>&1
         fi
         return 0
     else
@@ -665,8 +645,8 @@ function check_qlite_ssl() {
 
 function uninstall_nginx() {
     log_info "$NGINX_UNINSTALL_TIP"
-    sudo rm -rf "$NGINX_ROOT_PATH" >/dev/null 2>&1
-    sudo "$system_package" -y autoremove nginx >>${QLITE_SSL_LOG_FILE} 2>&1
+    rm -rf "$NGINX_ROOT_PATH" >/dev/null 2>&1
+    "$system_package" -y autoremove nginx >>${QLITE_SSL_LOG_FILE} 2>&1
     if ! is_command_exists nginx no; then
         log_success ${NGINX_UNINSTALL_SUCCESS}
     else
@@ -677,7 +657,7 @@ function uninstall_nginx() {
 function init_nginx_qlite_default_resource() {
     local need_update_nginx_conf=1
     if [ ! -f ${NGINX_QLITE_RESOURCE_INDEX_HTML} ]; then
-        create_dir $NGINX_QLITE_RESOURCE_HTML "yes" "666"
+        create_dir $NGINX_QLITE_RESOURCE_HTML
         if [ ! -f ${QLITE_SSL_INDEX_HTML} ]; then
             need_update_nginx_conf=0
         else
@@ -685,7 +665,7 @@ function init_nginx_qlite_default_resource() {
         fi
     fi
     if [ ! -f ${NGINX_QLITE_RESOURCE_WELCOME_IMG} ]; then
-        create_dir $NGINX_QLITE_RESOURCE_IMG "yes" "666"
+        create_dir $NGINX_QLITE_RESOURCE_IMG
         if [ ! -f ${QLITE_SSL_WELCOME_IMAGE} ]; then
             need_update_nginx_conf=0
         else
@@ -694,10 +674,10 @@ function init_nginx_qlite_default_resource() {
     fi
 
     if [ $need_update_nginx_conf -eq 0 ]; then
-        sudo cp ${QLITE_SSL_DOWNLOAD_INDEX_HTML} ${NGINX_QLITE_RESOURCE_INDEX_HTML} >/dev/null 2>&1
-        sudo chmod 666 ${NGINX_QLITE_RESOURCE_INDEX_HTML} >/dev/null 2>&1
-        sudo cp ${QLITE_SSL_DOWNLOAD_WELCOME_IMAGE} ${NGINX_QLITE_RESOURCE_WELCOME_IMG} >/dev/null 2>&1
-        sudo chmod 666 ${NGINX_QLITE_RESOURCE_WELCOME_IMG} >/dev/null 2>&1
+        cp ${QLITE_SSL_DOWNLOAD_INDEX_HTML} ${NGINX_QLITE_RESOURCE_INDEX_HTML} >/dev/null 2>&1
+        chmod 666 ${NGINX_QLITE_RESOURCE_INDEX_HTML} >/dev/null 2>&1
+        cp ${QLITE_SSL_DOWNLOAD_WELCOME_IMAGE} ${NGINX_QLITE_RESOURCE_WELCOME_IMG} >/dev/null 2>&1
+        chmod 666 ${NGINX_QLITE_RESOURCE_WELCOME_IMG} >/dev/null 2>&1
         if [ $? -eq 0 ]; then
             log_success $NGINX_GET_CONF_SUCCESS
             create_dir $QLITE_SSL_WWW
@@ -712,7 +692,7 @@ function init_nginx_qlite_default_resource() {
 function init_nginx_conf() {
     init_nginx_qlite_default_resource
     create_file /etc/nginx/nginx.conf
-    cat << EOF | sudo tee /etc/nginx/nginx.conf >>${QLITE_SSL_LOG_FILE} 2>&1
+    cat << EOF | tee /etc/nginx/nginx.conf >>${QLITE_SSL_LOG_FILE} 2>&1
 user root;
 worker_processes auto;
 pid /run/nginx.pid;
@@ -763,7 +743,7 @@ function kill_nginx_process() {
     local _process_nginx=$(ps aux | grep "nginx: master process" | grep -v grep | awk '{print $2}')
     if [[ -n $_process_nginx ]] && [[ $_process_nginx != '' ]]; then
         log_to_log "_process_nginx=${_process_nginx}"
-        sudo kill -9 ${_process_nginx} >>${QLITE_SSL_LOG_FILE} 2>&1
+        kill -9 ${_process_nginx} >>${QLITE_SSL_LOG_FILE} 2>&1
         if [ "$?" -eq 0 ]; then
             echo "kill nginx success" >>${QLITE_SSL_LOG_FILE} 2>&1
         else
@@ -773,7 +753,7 @@ function kill_nginx_process() {
 }
 
 function update_nginx_conf() {
-    cat << EOF | sudo tee /etc/nginx/nginx.conf >>${QLITE_SSL_LOG_FILE} 2>&1
+    cat << EOF | tee /etc/nginx/nginx.conf >>${QLITE_SSL_LOG_FILE} 2>&1
 user root;
 worker_processes auto;
 pid /run/nginx.pid;
@@ -826,7 +806,7 @@ http {
 }
 EOF
     kill_nginx_process
-    sudo nginx -c /etc/nginx/nginx.conf >>${QLITE_SSL_LOG_FILE} 2>&1
+    nginx -c /etc/nginx/nginx.conf >>${QLITE_SSL_LOG_FILE} 2>&1
 }
 
 function install_nginx() {
@@ -835,9 +815,9 @@ function install_nginx() {
     if [ -d $NGINX_ROOT_PATH ]; then
         local _datetime=$(date "+%s")
         create_dir "$QLITE_SSL_DOMAIN_BACKUP_NGINX"
-        sudo mv "$NGINX_ROOT_PATH" "$QLITE_SSL_DOMAIN_BACKUP_NGINX" >/dev/null 2>&1
+        mv "$NGINX_ROOT_PATH" "$QLITE_SSL_DOMAIN_BACKUP_NGINX" >/dev/null 2>&1
     fi
-    sudo "$system_package" -y install nginx >>${QLITE_SSL_LOG_FILE} 2>&1
+    "$system_package" -y install nginx >>${QLITE_SSL_LOG_FILE} 2>&1
     if [ ! -d "$NGINX_ROOT_PATH" ]; then
         log_error "$NGINX_INSTALL_ERROR"
         exit 1
@@ -850,7 +830,7 @@ function install_nginx() {
     fi
     log_success ${NGINX_INSTALL_SUCCESS}
     init_nginx_conf
-    sudo systemctl restart nginx >>${QLITE_SSL_LOG_FILE} 2>&1
+    systemctl restart nginx >>${QLITE_SSL_LOG_FILE} 2>&1
     sleep 3
     install_nginx_success="0"
 }
@@ -928,7 +908,7 @@ function uninstall_qlite_ssl() {
 
 function renew_cert() {
     log_info ${CERT_RENEW_TIP}
-    sudo "$ACME_SHELL_PATH" --renew -d "$user_domain" --force >>${QLITE_SSL_LOG_FILE} 2>&1
+    "$ACME_SHELL_PATH" --renew -d "$user_domain" --force >>${QLITE_SSL_LOG_FILE} 2>&1
     if [ $? -eq 0 ]; then
         log_success ${CERT_RENEW_SUCCESS}
         exit 0
@@ -967,8 +947,8 @@ function start_menu() {
 
 function init_log_file() {
     create_dir $QLITE_SSL_LOG
-    create_file $QLITE_SSL_LOG_FILE "yes" "666"
-    sudo echo "domain=${user_domain}, email=${contact_email}, cert-path=${cert_path}, IS_DEBUG=${IS_DEBUG}" >${QLITE_SSL_LOG_FILE}
+    create_file $QLITE_SSL_LOG_FILE
+    echo "domain=${user_domain}, email=${contact_email}, cert-path=${cert_path}, IS_DEBUG=${IS_DEBUG}" >${QLITE_SSL_LOG_FILE}
 }
 
 function init_dir_file() {
