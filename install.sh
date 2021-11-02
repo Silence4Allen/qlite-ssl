@@ -806,6 +806,7 @@ http {
 }
 EOF
     kill_nginx_process
+    sleep 3
     nginx -c /etc/nginx/nginx.conf >>${QLITE_SSL_LOG_FILE} 2>&1
 }
 
