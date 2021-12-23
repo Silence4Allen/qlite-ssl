@@ -13,10 +13,7 @@ function usage() {
   cat <<EOF
 Usage: $0 [OPTIONS]
 
-  --test                                 
-    在使用Let's Encrypt正式环境前，我们强烈建议您使用Let's Encrypt测试环境进行测试性部署，这将帮助您颁发受信任的证书前保证环境一切正常，并且降低您受到速率限制的可能性。
-
-  --help                                 
+  --help
     帮助文档
 EOF
   exit 0
@@ -36,7 +33,6 @@ function parse_arguments() {
     arg=$(echo "$arg" | sed "s/^$opt_name/$opt_name_subst/")
     case "$arg" in
     --help) usage ;;
-    --test) ACME_ENV_MODE="--staging" ;;
     *) shell_quote_string "${arg}" ;;
     esac
   done
@@ -219,18 +215,18 @@ function check_dns_entries() {
   local real_addr local_addr
   read -rep "请输入解析到该服务器的域名:" user_domain
   real_addr=$(ping "${user_domain}" -c 1 2>/dev/null | sed '1{s/[^(]*(//;s/).*//;q}')
-  local_addr=$(curl -s ipv4.icanhazip.com)
+  local_addr=$(curl -s cip.cc | grep 'IP' | awk '{ print $3 }')
   if [[ -n $real_addr ]] && [[ -n $local_addr ]] && [[ "$real_addr" == "$local_addr" ]]; then
     clear_window
     ACME_INSTALL_DOMAIN_CERT_PATH="${ACME_INSTALL_PATH}/${user_domain}/fullchain.cer"
     QLITE_SSL_CERT_PATH="${CURRENT_SHELL_PATH}/${user_domain}"
     if ! create_dir "${QLITE_SSL_CERT_PATH}"; then
-      log_error "创建文件目录[%s]出错，请检查后重试" "${QLITE_SSL_CERT_PATH}"
+      log_error "$(printf "创建文件目录[%s]出错，请检查后重试" "${QLITE_SSL_CERT_PATH}")"
     fi
     log_success "域名解析正常"
   else
     clear_window
-    log_error "域名解析地址与本服务器IP地址不一致，请输入解析到该服务器的正确域名: "
+    log_error "$(printf "域名解析地址[%s]与本服务器IP地址[%s]不一致，请输入解析到该服务器的正确域名: " "$real_addr" "$local_addr")"
     check_dns_entries
   fi
 }
@@ -383,7 +379,6 @@ function issue_cert() {
       show_log_tip_exit 1
     fi
   fi
-  echo $ACME_ENV_MODE
   "$ACME_INSTALL_EXEC_PATH" $ACME_ENV_MODE --issue -d "$user_domain" -d www."$user_domain" --"$web_server_plugin" --server "letsencrypt" -m "$contact_email" "${ACME_DEBUG_MODE}" >>"${LOG_FILE}" 2>&1
   if [ $? -eq 0 ] && test -s "$ACME_INSTALL_DOMAIN_CERT_PATH"; then
     log_success "获取证书成功"
@@ -548,7 +543,6 @@ function uninstall_qlite_ssl() {
 function renew_cert() {
   check_dns_entries
   log_info "开始更新域名证书"
-  echo $ACME_ENV_MODE
   "$ACME_INSTALL_EXEC_PATH" --renew $ACME_ENV_MODE -d "$user_domain" -d www."$user_domain" --force >>"${LOG_FILE}" 2>&1
   if [ $? -eq 0 ]; then
     log_success "更新域名证书成功"
