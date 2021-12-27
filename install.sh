@@ -181,8 +181,8 @@ function get_linux_info() {
 
 function install_required_pkg() {
   log_info "检查并安装必要文件"
-  log_to_log "$SYSTEM_PACKAGE -y install socat git wget curl unzip"
-  $SYSTEM_PACKAGE -y install "socat git wget curl unzip" >/dev/null 2>&1
+  log_to_log "$SYSTEM_PACKAGE -y install socat git wget curl unzip gawk"
+  $SYSTEM_PACKAGE -y install "socat git wget curl unzip gawk" >/dev/null 2>&1
 }
 
 function check_selinux() {
