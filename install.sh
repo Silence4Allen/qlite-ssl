@@ -343,6 +343,7 @@ function install_acme() {
 function check_command_failed_reason() {
   local _is_unknown_error=0
   local acme_error_reasons=(
+    "Timeout during connect (likely firewall problem)"
     "Verify error"
     "Register account Error:"
     "Create new order error"
@@ -357,13 +358,14 @@ function check_command_failed_reason() {
     if [[ -n $_err_msg ]] && [[ $_err_msg != '' ]]; then
       _is_unknown_error=1
       case $error_item in
-      "${acme_error_reasons[0]}") log_error "部署域名验证失败" ;;
-      "${acme_error_reasons[1]}") log_error "注册申请证书用户失败" ;;
-      "${acme_error_reasons[2]}") log_error "创建申请证书订单失败" ;;
-      "${acme_error_reasons[3]}") log_error "没有找到nginx配置文件[/etc/nginx/nginx.conf]，请检查后重试" ;;
-      "${acme_error_reasons[4]}") log_error "在配置文件中没有找到对应的域名配置，请检查后重试" ;;
-      "${acme_error_reasons[5]}") log_error "重新加载配置文件出错，请重启您的web server" ;;
-      "${acme_error_reasons[6]}") log_error "nginx出错，请检查" ;;
+      "${acme_error_reasons[0]}") log_error "连接超时，请检查防火墙后重试" ;;
+      "${acme_error_reasons[1]}") log_error "部署域名验证失败" ;;
+      "${acme_error_reasons[2]}") log_error "注册申请证书用户失败" ;;
+      "${acme_error_reasons[3]}") log_error "创建申请证书订单失败" ;;
+      "${acme_error_reasons[4]}") log_error "没有找到nginx配置文件[/etc/nginx/nginx.conf]，请检查后重试" ;;
+      "${acme_error_reasons[5]}") log_error "在配置文件中没有找到对应的域名配置，请检查后重试" ;;
+      "${acme_error_reasons[6]}") log_error "重新加载配置文件出错，请重启您的web server" ;;
+      "${acme_error_reasons[7]}") log_error "nginx出错，请检查" ;;
       esac
     fi
   done
