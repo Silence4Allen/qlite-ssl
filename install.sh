@@ -214,7 +214,7 @@ function check_update_system_resource() {
 function check_dns_entries() {
   local real_addr local_addr
   read -rep "请输入解析到该服务器的域名:" user_domain
-  real_addr=$(ping "${user_domain}" -c 1 2>/dev/null | sed '1{s/[^(]*(//;s/).*//;q}')
+  real_addr=$(dig "${user_domain}" +short)
   local_addr=$(curl -s cip.cc | grep 'IP' | awk '{ print $3 }')
   if [[ -n $real_addr ]] && [[ -n $local_addr ]] && [[ "$real_addr" == "$local_addr" ]]; then
     clear_window
