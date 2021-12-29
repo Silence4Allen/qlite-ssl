@@ -181,8 +181,8 @@ function get_linux_info() {
 
 function install_required_pkg() {
   log_info "检查并安装必要文件"
-  log_to_log "$SYSTEM_PACKAGE -y install socat git wget curl unzip gawk"
-  $SYSTEM_PACKAGE -y install "socat git wget curl unzip gawk" >/dev/null 2>&1
+  log_to_log "$SYSTEM_PACKAGE -y install socat git wget curl unzip gawk dig"
+  $SYSTEM_PACKAGE -y install "socat git wget curl unzip gawk dig" >/dev/null 2>&1
 }
 
 function check_selinux() {
@@ -214,6 +214,9 @@ function check_update_system_resource() {
 function check_dns_entries() {
   local real_addr local_addr
   read -rep "请输入解析到该服务器的域名:" user_domain
+  if ! is_command_exists dig; then
+    exit 1
+  fi
   real_addr=$(dig "${user_domain}" +short)
   local_addr=$(curl -s cip.cc | grep 'IP' | awk '{ print $3 }')
   if [[ -n $real_addr ]] && [[ -n $local_addr ]] && [[ "$real_addr" == "$local_addr" ]]; then
